@@ -42,11 +42,6 @@ $   python setup.py build_ext --inplace
 ## More detailed explanation
 想要了解相关实现的细节和原理可以看我的知乎文章:   
 
-* [YOLOv5_DOTAv1.5(遥感旋转目标检测，全踩坑记录)](https://zhuanlan.zhihu.com/p/357992219).
-* [YOLOv5_DOTA无人机/遥感旋转目标检测项目代码（从数据集制作、模型训练、性能评估全套流程）](https://zhuanlan.zhihu.com/p/358072483).
-* [YOLOv5在无人机/遥感场景下做旋转目标检测时进行的适应性改建详解](https://zhuanlan.zhihu.com/p/358441134).
-* [【旋转目标检测】YOLOv5应对无人机/遥感场景相关难点的解决方案](https://zhuanlan.zhihu.com/p/359249077).
-
 
 ## Usage Example
 `1.` `'Get Dataset' `
