@@ -114,14 +114,6 @@ $  python evaluation.py
 
 ![detection_result_after_merge](./P0004_.png)
 
-
-## 有问题反馈
-在使用中有任何问题，欢迎反馈给我，可以用以下联系方式跟我交流
-
-* 知乎（@[略略略](https://www.zhihu.com/people/lue-lue-lue-3-92-86)）
-* 代码问题提issues,其他问题请知乎上联系
-
-
 ## 感激
 感谢以下的项目,排名不分先后
 
