@@ -260,6 +260,7 @@ def voc_eval(detpath,
 
     return rec, prec, ap
 
+#evaluation
 def evaluation(detoutput, imageset, annopath, classnames):
     """
     评估程序
