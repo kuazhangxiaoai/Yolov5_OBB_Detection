@@ -26,16 +26,6 @@ YOLOv5 in DOTA_OBB dataset with CSL_label.(Oriented Object Detection)
 ```
 $   pip install -r requirements.txt
 ```
-`2.` Install swig
-```
-$   cd  \.....\yolov5_DOTA_OBB\utils
-$   sudo apt-get install swig
-```
-`3.` Create the c++ extension for python
-```
-$   swig -c++ -python polyiou.i
-$   python setup.py build_ext --inplace
-```
 
 
 
@@ -140,7 +130,7 @@ $  python evaluation.py
 ## 关于作者
 
 ```javascript
-  Name  : "胡凯旋"
-  describe myself："咸鱼一枚"
+  Name  : "杨刚"
+  describe myself："kuazhangxiaoai"
   
 ```
