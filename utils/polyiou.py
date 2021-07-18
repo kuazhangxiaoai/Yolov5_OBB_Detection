@@ -1,6 +1,9 @@
 from shapely.geometry import Polygon
 import torch
 
+"""
+This py file is designed for replacing the same function of C++ and CUDA
+"""
 class Point:
     def __init__(self,x=0,y=0):
         self.x = x
