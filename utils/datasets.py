@@ -471,7 +471,7 @@ class LoadImagesAndLabels(Dataset):
         self.stride = stride
 
         # Define labels
-        sa, sb = os.sep + 'images' + os.sep, os.sep + 'labels' + os.sep  # sa=/images/, sb=/labels/   as substrings
+        sa, sb = os.sep + 'images' + os.sep, os.sep + 'yolo_labels' + os.sep  # sa=/images/, sb=/labels/   as substrings
         # p路径文件夹下所有label_txt都会存在self.label_files   self.label_files=['??\\labels\\train2017\\1.txt',...,]
         self.label_files = [x.replace(sa, sb, 1).replace(os.path.splitext(x)[-1], '.txt') for x in self.img_files]
 
