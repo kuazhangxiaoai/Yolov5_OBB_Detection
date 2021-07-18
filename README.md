@@ -21,7 +21,8 @@ YOLOv5 in DOTA_OBB dataset with CSL_label.(Oriented Object Detection)
 
 
 
-## Installation  (Linux Recommend, Windows not Recommend)
+## Installation  (Linux and Windows)
+This code is created by pure python, and can be uesd for both Windows and Linux easily.
 `1.` Python 3.8 with all requirements.txt dependencies installed, including torch==1.6, opencv-python==4.1.2.30, To install run:
 ```
 $   pip install -r requirements.txt
@@ -124,6 +125,7 @@ $  python evaluation.py
 ## 感激
 感谢以下的项目,排名不分先后
 
+* [hukaixuan19970627/YOLOv5_DOTA_OBB](https://github.com/hukaixuan19970627/YOLOv5_DOTA_OBB).
 * [ultralytics/yolov5](https://github.com/ultralytics/yolov5).
 * [Thinklab-SJTU/CSL_RetinaNet_Tensorflow](https://github.com/Thinklab-SJTU/CSL_RetinaNet_Tensorflow).
 
