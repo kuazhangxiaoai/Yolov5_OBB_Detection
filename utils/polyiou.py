@@ -25,6 +25,8 @@ def compare(a:Point,b:Point,c:Point):
 
 
 def poly_iou_kernel(polygon1:Polygon, polygon2:Polygon):
+    polygon1 = polygon1.buffer(0.001)
+    polygon2 = polygon2.buffer(0.001)
     intersaction = polygon1.intersection(polygon2).area
     union = polygon1.union(polygon2).area
     ious = intersaction/union
@@ -40,9 +42,9 @@ def sort(input:list):
     center.x = center.x / len(input)
     center.y = center.y / len(input)
     for i in range(len(input)-1):
-        for j in range(len(input) - i - 1):
-            if compare(input[j],input[j+1],center) == True:
-                input[j],input[j+1] = input[j+1],input[j]
+        for j in range(i+1, len(input)):
+            if compare(input[j],input[i],center) == True:
+                input[j],input[i] = input[i],input[j]
     return input
 
 def poly_iou(poly1,poly2):
@@ -71,7 +73,7 @@ def poly_iou(poly1,poly2):
     return ious
 
 
-#poly1 = torch.Tensor([0,0,0,1,1,0,1,1])
-#poly2 = torch.Tensor([0.5,0.5,1.5,0.5,1.5,1.5,0.5,1.5])
-#iou = poly_iou(poly1,poly2)
-#print(iou)
+poly1 = torch.Tensor([0,0,1,1,1,0,0,1])
+poly2 = torch.Tensor([0.5,0.5,1.5,0.5,1.5,1.5,0.5,1.5])
+iou = poly_iou(poly1,poly2)
+print(iou)
