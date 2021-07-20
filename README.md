@@ -55,8 +55,6 @@ $  classid    x_c   y_c   longside   shortside    Θ    Θ∈[0, 180)
 ```
 `WARNING: IMAGE SIZE MUST MEETS 'HEIGHT = WIDTH'`
 
-![label_format_demo](./label_format_demo.png)
-
 `2.` `'train.py'` 
 
 * All same as [ultralytics/yolov5](https://github.com/ultralytics/yolov5).  You better train demo files first before train your custom dataset.
@@ -68,11 +66,6 @@ $ python train.py  --batch-size 4 --device 0
 ```
 python -m torch.distributed.launch --nproc_per_node 4 train.py --sync-bn --device 0,1,2,3
 ```
-
-![train_batch_mosaic0](./train_batch0.jpg)
-![train_batch_mosaic1](./train_batch1.jpg)
-![train_batch_mosaic2](./train_batch2.jpg)
-
 
 `3.` `'detect.py'` 
     
@@ -108,7 +101,7 @@ draw_DOTA_image
 ```
 $  python evaluation.py
 ```
-
+## Model Picture
 ![detection_result_after_merge](./P0004_.png)
 
 ## 感激
