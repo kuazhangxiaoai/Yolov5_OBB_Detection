@@ -76,9 +76,6 @@ python -m torch.distributed.launch --nproc_per_node 4 train.py --sync-bn --devic
 $  python detect.py
 ```
 
-![detection_result_before_merge1](./Yolov5m_structure.png)
-
-
 `4.` `'evaluation.py'` 
 
 * Run the detect.py demo first. Then change the path with yours:
@@ -102,7 +99,7 @@ draw_DOTA_image
 $  python evaluation.py
 ```
 ## Model Picture
-![detection_result_after_merge](./P0004_.png)
+![detection_result_after_merge](./Yolov5m_structure.png)
 
 ## 感激
 感谢以下的项目,排名不分先后
