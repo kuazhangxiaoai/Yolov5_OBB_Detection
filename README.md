@@ -83,10 +83,7 @@ python -m torch.distributed.launch --nproc_per_node 4 train.py --sync-bn --devic
 $  python detect.py
 ```
 
-![detection_result_before_merge1](./P0004__1__0___0.png)
-![detection_result_before_merge2](./P0004__1__0___440.png)
-![draw_detection_result](./P1478__1__853___824.png)
-
+![detection_result_before_merge1](./Yolov5m_structure.png)
 
 
 `4.` `'evaluation.py'` 
