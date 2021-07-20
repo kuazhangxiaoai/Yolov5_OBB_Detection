@@ -99,7 +99,7 @@ draw_DOTA_image
 $  python evaluation.py
 ```
 ## Model Picture
-![detection_result_after_merge](./Yolov5m_structure.png)
+![detection_result_after_merge](./Yolov5m_struct.png)
 
 ## 感激
 感谢以下的项目,排名不分先后
