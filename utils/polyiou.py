@@ -1,6 +1,7 @@
 from shapely.geometry import Polygon
 import torch
 
+import time
 """
 This py file is designed for replacing the same function of C++ and CUDA
 """
@@ -72,8 +73,12 @@ def poly_iou(poly1,poly2):
     ious = poly_iou_kernel(polygon1,polygon2)
     return ious
 
-
+"""
 poly1 = torch.Tensor([0,0,1,1,1,0,0,1])
 poly2 = torch.Tensor([0.5,0.5,1.5,0.5,1.5,1.5,0.5,1.5])
+ts = time.time()
 iou = poly_iou(poly1,poly2)
+te = time.time()
 print(iou)
+print(te-ts)
+"""

@@ -359,13 +359,13 @@ if __name__ == '__main__':
 
     #
     evaluation(
-        detoutput='/home/test/Persons/hukaixuan/yolov5_DOTA_OBB/DOTA_demo_view/detection',
-        imageset=r'/home/test/Persons/hukaixuan/yolov5_DOTA_OBB/DOTA_demo_view/row_images',
-        annopath=r'/home/test/Persons/hukaixuan/yolov5_DOTA_OBB/DOTA_demo_view/row_DOTA_labels/{:s}.txt',
+        detoutput='./DOTA_demo_view/detection',
+        imageset='./DOTA_demo_view/row_images',
+        annopath=r'./DOTA_demo_view/row_DOTA_labels/{:s}.txt',
         classnames=classnames
     )
 
-    draw_DOTA_image(imgsrcpath=r'/home/test/Persons/hukaixuan/yolov5_DOTA_OBB/DOTA_demo_view/row_images',
+    draw_DOTA_image(imgsrcpath='./DOTA_demo_view/row_images',
                     imglabelspath=r'/home/test/Persons/hukaixuan/yolov5_DOTA_OBB/DOTA_demo_view/detection/result_txt/result_merged',
                     dstpath=r'/home/test/Persons/hukaixuan/yolov5_DOTA_OBB/DOTA_demo_view/detection/merged_drawed',
                     extractclassname=classnames,
