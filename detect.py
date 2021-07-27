@@ -8,6 +8,7 @@ from pathlib import Path
 import cv2
 import torch
 import torch.backends.cudnn as cudnn
+import torch.nn.functional as F
 from numpy import random
 
 from models.experimental import attempt_load
@@ -97,13 +98,14 @@ def detect(save_img=False):
     for path, img, im0s, vid_cap in dataset:
         print(img.shape)
         img = torch.from_numpy(img).to(device)
+        cimg = img
         # 图片也设置为Float16
-        img = img.half() if half else img.float()  # uint8 to fp16/32
-        img /= 255.0  # 0 - 255 to 0.0 - 1.0
+        #img = img.half() if half else img.float()  # uint8 to fp16/32
+        #img /= 255.0  # 0 - 255 to 0.0 - 1.0
         # 没有batch_size的话则在最前面添加一个轴
-        if img.ndimension() == 3:
+        #if img.ndimension() == 3:
             # (in_channels,size1,size2) to (1,in_channels,img_height,img_weight)
-            img = img.unsqueeze(0)  # 在[0]维增加一个维度
+        #    img = img.unsqueeze(0)  # 在[0]维增加一个维度
 
         # Inference
         t1 = time_synchronized()
@@ -123,8 +125,46 @@ def detect(save_img=False):
         pred[0][..., 5:5+nc]为分类结果
         pred[0][..., 5+nc:]为Θ分类结果
         """
+        c, h, w = img.shape
+        ph = h % imgsz
+        pw = w % imgsz
+        sh = h // imgsz
+        sw = w // imgsz
+
+        if (sh == 0):
+            img = F.pad(img, (0, 0, 0, imgsz - ph))
+        if (sw == 0):
+            img = F.pad(img, (0, imgsz - pw, 0, 0))
+
+        _, nh, nw = img.shape
+        left, up, gap = 0, 0, 512
+        preds = []
+        for y in range(0, nh, imgsz - gap):
+            for x in range(0, nw, imgsz - gap):
+                left = x
+                up = y
+                if x + imgsz > nw:
+                    left = nw - imgsz
+                if y + imgsz > nh:
+                    up = nh - imgsz
+                im = img[:, up:up + imgsz, left:left + imgsz]
+                im = im.half() if half else im.float()
+                im /= 255.0
+                if im.ndimension() == 3:
+                    im = im.unsqueeze(0)
+                with torch.no_grad():
+                    pred = model(im, augment=opt.augment)[0]
+                    pred = pred.cpu()
+                try:
+                    pred[..., 0] += left
+                    pred[..., 1] += up
+                    preds.append(pred)
+                except:
+                    continue
+
+        pred = torch.cat(preds, dim=1)
         # pred : (batch_size, num_boxes, no)  batch_size=1
-        pred = model(img, augment=opt.augment)[0]
+        #pred = model(img, augment=opt.augment)[0]
 
         # Apply NMS
         # 进行NMS
@@ -132,6 +172,13 @@ def detect(save_img=False):
         #pred = non_max_suppression(pred, opt.conf_thres, opt.iou_thres, classes=opt.classes, agnostic=opt.agnostic_nms)
         pred = rotate_non_max_suppression(pred, opt.conf_thres, opt.iou_thres, classes=opt.classes, agnostic=opt.agnostic_nms, without_iouthres=False)
         t2 = time_synchronized()
+        img = cimg
+        img = img.half() if half else img.float()  # uint8 to fp16/32
+        img /= 255.0  # 0 - 255 to 0.0 - 1.0
+        # 没有batch_size的话则在最前面添加一个轴
+        if img.ndimension() == 3:
+            # (in_channels,size1,size2) to (1,in_channels,img_height,img_weight)
+            img = img.unsqueeze(0)  # 在[0]维增加一个维度
 
         # Apply Classifier
         if classify:
@@ -152,7 +199,7 @@ def detect(save_img=False):
 
             if det is not None and len(det):
                 # Rescale boxes from img_size to im0 size
-                det[:, :5] = scale_labels(img.shape[2:], det[:, :5], im0.shape).round()
+                #det[:, :5] = scale_labels(img.shape[2:], det[:, :5], im0.shape).round()
 
                 # Print results    det:(num_nms_boxes, [xylsθ,conf,classid]) θ∈[0,179]
                 for c in det[:, -1].unique():  # unique函数去除其中重复的元素，并按元素（类别）由大到小返回一个新的无元素重复的元组或者列表
@@ -227,11 +274,11 @@ if __name__ == '__main__':
     """
     parser = argparse.ArgumentParser()
     parser.add_argument('--weights', nargs='+', type=str, default='./weights/YOLOv5_DOTA_OBB.pt', help='model.pt path(s)')
-    parser.add_argument('--source', type=str, default='DOTA_demo_view/images', help='source')  # file/folder, 0 for webcam
+    parser.add_argument('--source', type=str, default='D:/data/DOTA/val/images', help='source')  # file/folder, 0 for webcam
     parser.add_argument('--output', type=str, default='DOTA_demo_view/detection', help='output folder')  # output folder
     parser.add_argument('--img-size', type=int, default=1024, help='inference size (pixels)')
-    parser.add_argument('--conf-thres', type=float, default=0.25, help='object confidence threshold')
-    parser.add_argument('--iou-thres', type=float, default=0.4, help='IOU threshold for NMS')
+    parser.add_argument('--conf-thres', type=float, default=0.05, help='object confidence threshold')
+    parser.add_argument('--iou-thres', type=float, default=0.1, help='IOU threshold for NMS')
     parser.add_argument('--device', default='0,1', help='cuda device, i.e. 0 or 0,1,2,3 or cpu')
     parser.add_argument('--view-img', action='store_true', help='display results')
     parser.add_argument('--save-txt', action='store_true', help='save results to *.txt')
