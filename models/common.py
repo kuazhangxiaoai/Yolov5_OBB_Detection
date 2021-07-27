@@ -56,7 +56,42 @@ class Conv(nn.Module):
 
     def fuseforward(self, x):  # 前向融合计算（无BN）
         return self.act(self.conv(x))
+"""
+class Bottleneck(nn.Module):
+    '''
+    标准Bottleneck层
+        input : input
+        output : input + Conv3×3（Conv1×1(input)）
+    (self, in_channels, out_channels, shortcut_flag, group, expansion隐藏神经元的缩放因子)
+    out_size = in_size
+    '''
+    # Standard bottleneck
+    def __init__(self, c1, c2, shortcut=True, g=1, e=0.5, attention=False):  # ch_in, ch_out, shortcut, groups, expansion
+        super(Bottleneck, self).__init__()
+        c_ = int(c2 * e)  # hidden channels
+        self.cv1 = Conv(c1, c_, 1, 1)
+        self.cv2 = Conv(c_, c2, 3, 1, g=g)
+        self.add = shortcut and c1 == c2
+        self.attention = attention
+        if attention:
+            self.ca = ChannelAttention(c2)
+            self.sa = SpatialAttention()
 
+    def forward(self, x):
+        '''
+        若 shortcut_flag为Ture 且 输入输出通道数相等，则返回跳接后的结构：
+            x + Conv3×3（Conv1×1(x)）
+        否则不进行跳接：
+            Conv3×3（Conv1×1(x)）
+        '''
+        res = x
+        x = self.cv2(self.cv1(x))
+        if self.attention:
+            x = self.ca(x) * x
+            x = self.sa(x) * x
+        out = x + res if self.add else x
+        return out
+"""
 class Bottleneck(nn.Module):
     '''
     标准Bottleneck层
@@ -73,6 +108,7 @@ class Bottleneck(nn.Module):
         self.cv2 = Conv(c_, c2, 3, 1, g=g)
         self.add = shortcut and c1 == c2
 
+
     def forward(self, x):
         '''
         若 shortcut_flag为Ture 且 输入输出通道数相等，则返回跳接后的结构：
@@ -80,7 +116,10 @@ class Bottleneck(nn.Module):
         否则不进行跳接：
             Conv3×3（Conv1×1(x)）
         '''
-        return x + self.cv2(self.cv1(x)) if self.add else self.cv2(self.cv1(x))
+        res = x
+        x = self.cv2(self.cv1(x))
+        out = x + res if self.add else x
+        return out
 
 class BottleneckCSP(nn.Module):
     '''
@@ -193,3 +232,40 @@ class Classify(nn.Module):
         #
         z = torch.cat([self.aap(y) for y in (x if isinstance(x, list) else [x])], 1)  # cat if x is list
         return self.flat(self.conv(z))  # flatten to x(batch_size, ch_out×1×1)
+
+class ChannelAttention(nn.Module):
+    def __init__(self, in_planes, ratio=16):
+        super(ChannelAttention, self).__init__()
+        self.avg_pool = nn.AdaptiveAvgPool2d(1)
+        self.max_pool = nn.AdaptiveMaxPool2d(1)
+        self.fc = nn.Sequential(
+            nn.Conv2d(in_planes,in_planes//ratio, 1,bias=False),
+            nn.ReLU(),
+            nn.Conv2d(in_planes//ratio, in_planes,1,bias=False)
+        )
+        self.sigmoid = nn.Sigmoid()
+
+    def forward(self,x):
+        avg_out = self.fc(self.avg_pool(x))
+        max_out = self.fc(self.max_pool(x))
+        out = avg_out + max_out
+        return self.sigmoid(out)
+
+class SpatialAttention(nn.Module):
+    def __init__(self, kernel_size=7):
+        super(SpatialAttention, self).__init__()
+        self.conv1 = nn.Conv2d(2, 1, kernel_size=kernel_size,
+                               padding=kernel_size//2, bias=False)
+        self.sigmoid = nn.Sigmoid()
+
+    def forward(self, x):
+        avg_out = torch.mean(x,dim=1,keepdim=True)
+        max_out,_ = torch.max(x, dim=1,keepdim=True)
+        out = torch.cat([avg_out,max_out], dim=1)
+        out = self.conv1(out)
+        return self.sigmoid(out)
+
+
+
+
+
