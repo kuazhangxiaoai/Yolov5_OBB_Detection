@@ -132,9 +132,16 @@ def detect(save_img=False):
         sw = w // imgsz
 
         if (sh == 0):
-            img = F.pad(img, (0, 0, 0, imgsz - ph))
+            top_pad,bottom_pad = int(round(imgsz - ph - 0.1)),int(round(imgsz - ph + 0.1))
+            img = F.pad(img, (0, 0, top_pad, bottom_pad))
+        else:
+            top_pad,bottom_pad = 0, 0
         if (sw == 0):
-            img = F.pad(img, (0, imgsz - pw, 0, 0))
+            left_pad,right_pad = int(round(imgsz - pw - 0.1)),int(round(imgsz - pw + 0.1))
+            img = F.pad(img, (left_pad, right_pad, 0, 0))
+        else:
+            left_pad,right_pad = 0, 0
+
 
         _, nh, nw = img.shape
         left, up, gap = 0, 0, 512
@@ -156,8 +163,8 @@ def detect(save_img=False):
                     pred = model(im, augment=opt.augment)[0]
                     pred = pred.cpu()
                 try:
-                    pred[..., 0] += left
-                    pred[..., 1] += up
+                    pred[..., 0] += (left - left_pad)
+                    pred[..., 1] += (up - top_pad)
                     preds.append(pred)
                 except:
                     continue
@@ -170,6 +177,7 @@ def detect(save_img=False):
         # 进行NMS
         # pred : list[tensor(batch_size, num_conf_nms, [xylsθ,conf,classid])] θ∈[0,179]
         #pred = non_max_suppression(pred, opt.conf_thres, opt.iou_thres, classes=opt.classes, agnostic=opt.agnostic_nms)
+        pred = pred.cuda()
         pred = rotate_non_max_suppression(pred, opt.conf_thres, opt.iou_thres, classes=opt.classes, agnostic=opt.agnostic_nms, without_iouthres=False)
         t2 = time_synchronized()
         img = cimg
@@ -274,7 +282,7 @@ if __name__ == '__main__':
     """
     parser = argparse.ArgumentParser()
     parser.add_argument('--weights', nargs='+', type=str, default='./weights/YOLOv5_DOTA_OBB.pt', help='model.pt path(s)')
-    parser.add_argument('--source', type=str, default='D:/data/DOTA/val/images', help='source')  # file/folder, 0 for webcam
+    parser.add_argument('--source', type=str, default='D:\\project\\DOTA_devkit-master\\example\\images\\val2014', help='source')  # file/folder, 0 for webcam
     parser.add_argument('--output', type=str, default='DOTA_demo_view/detection', help='output folder')  # output folder
     parser.add_argument('--img-size', type=int, default=1024, help='inference size (pixels)')
     parser.add_argument('--conf-thres', type=float, default=0.05, help='object confidence threshold')
