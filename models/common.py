@@ -3,6 +3,7 @@ import math
 
 import torch
 import torch.nn as nn
+import torch.nn.functional as F
 from utils.general import non_max_suppression
 '''
 feature map尺寸计算公式： out_size = (in_size + 2*Padding - kernel_size)/strides + 1
@@ -56,42 +57,7 @@ class Conv(nn.Module):
 
     def fuseforward(self, x):  # 前向融合计算（无BN）
         return self.act(self.conv(x))
-"""
-class Bottleneck(nn.Module):
-    '''
-    标准Bottleneck层
-        input : input
-        output : input + Conv3×3（Conv1×1(input)）
-    (self, in_channels, out_channels, shortcut_flag, group, expansion隐藏神经元的缩放因子)
-    out_size = in_size
-    '''
-    # Standard bottleneck
-    def __init__(self, c1, c2, shortcut=True, g=1, e=0.5, attention=False):  # ch_in, ch_out, shortcut, groups, expansion
-        super(Bottleneck, self).__init__()
-        c_ = int(c2 * e)  # hidden channels
-        self.cv1 = Conv(c1, c_, 1, 1)
-        self.cv2 = Conv(c_, c2, 3, 1, g=g)
-        self.add = shortcut and c1 == c2
-        self.attention = attention
-        if attention:
-            self.ca = ChannelAttention(c2)
-            self.sa = SpatialAttention()
 
-    def forward(self, x):
-        '''
-        若 shortcut_flag为Ture 且 输入输出通道数相等，则返回跳接后的结构：
-            x + Conv3×3（Conv1×1(x)）
-        否则不进行跳接：
-            Conv3×3（Conv1×1(x)）
-        '''
-        res = x
-        x = self.cv2(self.cv1(x))
-        if self.attention:
-            x = self.ca(x) * x
-            x = self.sa(x) * x
-        out = x + res if self.add else x
-        return out
-"""
 class Bottleneck(nn.Module):
     '''
     标准Bottleneck层
@@ -192,7 +158,6 @@ class Concat(nn.Module):
     def forward(self, x):
         return torch.cat(x, self.d)
 
-
 class NMS(nn.Module):
     # Non-Maximum Suppression (NMS) module
     conf = 0.3  # confidence threshold
@@ -259,11 +224,110 @@ class SpatialAttention(nn.Module):
         self.sigmoid = nn.Sigmoid()
 
     def forward(self, x):
-        avg_out = torch.mean(x,dim=1,keepdim=True)
+        avg_out = torch.mean(x, dim=1,keepdim=True)
         max_out,_ = torch.max(x, dim=1,keepdim=True)
         out = torch.cat([avg_out,max_out], dim=1)
         out = self.conv1(out)
         return self.sigmoid(out)
+
+class Flatten(nn.Module):
+    def forward(self, x):
+        return x.view(x.size(0), -1)
+
+class ChannelAttention_v2(nn.Module):
+    def __init__(self, in_planes, ratio=16, pool_types=['avg', 'max']):
+        super(ChannelAttention_v2, self).__init__()
+        self.in_planes = in_planes
+        self.pool_types = pool_types
+        self.mlp = nn.Sequential(
+            Flatten(),
+            nn.Linear(in_planes, in_planes//ratio),
+            nn.Linear(in_planes//ratio, in_planes//ratio),
+            nn.ReLU(),
+            nn.Linear(in_planes//ratio, in_planes)
+        )
+
+    def forward(self, x):
+        for pool_type in self.pool_types:
+            if pool_type == 'avg':
+                avg_pool = F.avg_pool2d(x, (x.size(2), x.size(3)), stride=(x.size(2), x.size(3)))
+                channel_att_avg = self.mlp(avg_pool)
+            elif pool_type == 'max':
+                max_pool = F.max_pool2d(x, (x.size(2), x.size(3)), stride=(x.size(2), x.size(3)))
+                channel_att_max = self.mlp(max_pool)
+        channel_att_sum =  channel_att_avg + channel_att_max
+        scale = F.sigmoid(channel_att_sum).unsqueeze(2).unsqueeze(3).expand_as(x)
+        return x*scale
+
+class ChannelPool(nn.Module):
+    def forward(self, x):
+        return torch.cat( (torch.max(x,1)[0].unsqueeze(1), torch.mean(x,1).unsqueeze(1)), dim=1 )
+
+class SpatialAttention_v2(nn.Module):
+    def __init__(self, kernel_size=7):
+        super(SpatialAttention_v2, self).__init__()
+        self.compress = ChannelPool()
+        self.conv1 = nn.Conv2d(2, 1, kernel_size=kernel_size, padding=kernel_size//2, bias=False)
+        self.bn = nn.BatchNorm2d(1)
+    def forward(self, x):
+        x_compress = self.compress(x)
+        x_out = self.spatial(x_compress)
+        scale = F.sigmoid(x_out)  # broadcasting
+        return x*scale
+
+class CBAM(nn.Module):
+    def __init__(self, in_planes):
+        super(CBAM, self).__init__()
+        self.sptial_attn = SpatialAttention()
+        self.channel_attn = ChannelAttention(in_planes=in_planes)
+
+    def forward(self, x):
+        x = self.channel_attn(x)*x
+        y = self.sptial_attn(x)*x
+        return y
+
+#Swin-transformer as follow：
+def window_partition(x, window_size):
+    B,H,W,C = x.shape
+    x = x.view(B,H//window_size,window_size,W//window_size,window_size,C)
+    windows = x.permute(0,1,3,2,4,5).contiguous().view(-1, window_size, window_size, C)
+    return windows
+
+def window_reverse(windows, window_size,H,W):
+    B = int(windows.shape[0] / (H * W / window_size / window_size))
+    x = windows.view(B, H // window_size, W // window_size, window_size, window_size, -1)
+    x = x.permute(0, 1, 3, 2, 4, 5).contiguous().view(B, H, W, -1)
+    return x
+
+class Mlp(nn.Module):
+    def __init__(self, in_features, hiden_features=None, out_features=None, act_layer=nn.GELU,drop=0.):
+        super().__init__()
+        out_features = out_features or in_features
+        hiden_features = hiden_features or in_features
+        self.fc1 = nn.Linear(in_features, hiden_features)
+        self.act = act_layer()
+        self.fc2 = nn.Linear(hiden_features, out_features)
+        self.drop = nn.Dropout(drop)
+
+    def forward(self, x):
+        x = self.fc1(x)
+        x = self.act(x)
+        x = self.drop(x)
+        x = self.fc2(x)
+        x = self.drop(x)
+        return x
+
+        
+if __name__ == "__main__":
+    x = torch.randn([4,128,64,64])
+    layer = ChannelAttention_v2(in_planes=128)
+    layer2 = SpatialAttention_v2()
+    y = layer(x)
+    z = layer2(y)
+    print("ending")
+
+
+
 
 
 

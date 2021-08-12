@@ -11,7 +11,7 @@ logger = logging.getLogger(__name__)
 import torch
 import torch.nn as nn
 
-from models.common import Conv, Bottleneck, SPP, DWConv, Focus, BottleneckCSP, Concat, NMS
+from models.common import Conv, Bottleneck, SPP, DWConv, Focus, BottleneckCSP, Concat, NMS, CBAM
 from models.experimental import MixConv2d, CrossConv, C3
 from utils.general import check_anchor_order, make_divisible, check_file, set_logging
 from utils.torch_utils import (
@@ -344,7 +344,7 @@ def parse_model(d, ch):  # model_dict, input_channels(3)
         n = max(round(n * gd), 1) if n > 1 else n  # depth gain,BottleneckCSP层中Bottleneck层的个数
 
         # 排除concat，Unsample，Detect的情况
-        if m in [Conv, Bottleneck, SPP, DWConv, MixConv2d, Focus, CrossConv, BottleneckCSP, C3]:
+        if m in [Conv, Bottleneck, SPP, DWConv, MixConv2d, Focus, CrossConv, BottleneckCSP, C3, CBAM]:
             # ch每次循环都会扩增[3]-> [3,80] -> [3,80,160] -> [3,80,160,160] -> '''
             c1, c2 = ch[f], args[0]  # c1 = 3， c2 = 每次module函数中的out_channels参数
 
@@ -372,12 +372,16 @@ def parse_model(d, ch):  # model_dict, input_channels(3)
             if m in [BottleneckCSP, C3]:
                 args.insert(2, n)       # [ch[-1], out_channnels, Bottleneck_num] — BottleneckCSP与C3层
                 n = 1
+            if m is CBAM:
+                args = [args[0]]
 
         elif m is nn.BatchNorm2d:
             args = [ch[f]]
         elif m is Concat:
             # 以第一个concat为例 ： ch[-1] + ch[x+1] = ch[-1]+ch[7] = 640 + 640 = 1280
             c2 = sum([ch[-1 if x == -1 else x + 1] for x in f])
+        elif m is CBAM:
+            c2 = [ch[f]]
         elif m is Detect:
             args.append([ch[x + 1] for x in f])
             if isinstance(args[1], int):  # number of anchors
@@ -425,7 +429,7 @@ def parse_model(d, ch):  # model_dict, input_channels(3)
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
-    parser.add_argument('--cfg', type=str, default='yolov5a.yaml', help='model.yaml')
+    parser.add_argument('--cfg', type=str, default='yolov5mcbam.yaml', help='model.yaml')
     parser.add_argument('--device', default='', help='cuda device, i.e. 0 or 0,1,2,3 or cpu')
     opt = parser.parse_args()
     opt.cfg = check_file(opt.cfg)  # check file
@@ -433,12 +437,14 @@ if __name__ == '__main__':
     device = select_device(opt.device)
 
     # Create model
-    model = Model(opt.cfg).to(device)
+    #model = Model(opt.cfg).to(device)
+    model = Model(opt.cfg)
     model.train()
 
     # Profile
     #img = torch.rand(8 if torch.cuda.is_available() else 1, 3, 640, 640).to(device)
-    img = torch.randn(1,3,320,320).to(device)
+    #img = torch.randn(1,3,1024, 1024).to(device)
+    img = torch.randn(1, 3, 1024, 1024)
     y = model(img)
     print("ending")
 
